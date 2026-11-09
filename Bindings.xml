@@ -1,0 +1,5 @@
+<Bindings>
+	<Binding name="WANDERERPROFESSIONS_TOGGLE" header="WANDERERPROFESSIONS">
+		WandererProfessions_Toggle()
+	</Binding>
+</Bindings>

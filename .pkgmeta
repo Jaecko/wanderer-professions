@@ -1,0 +1,14 @@
+# BigWigs packager: the zip is the addon folder "WandererProfessions", the changelog of the version is CHANGELOG.md
+# (written at each release from the full changelog).
+package-as: WandererProfessions
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+ignore:
+  - README.md
+
+# Shown on CurseForge: Wanderer Professions needs Wanderer.
+required-dependencies:
+  - wanderer
