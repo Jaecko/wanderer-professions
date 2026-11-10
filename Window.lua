@@ -1411,6 +1411,16 @@ local function OnEvent(_, event, unit, second, spell, fourth)
 end
 
 function ns.Init()
+	-- (the controller's wheel: the workbench in front of the game's window, when it replaces it)
+	if W and W.Skin and W.Skin.PadStandIn then
+		W.Skin.PadStandIn({ micro = _G.ProfessionMicroButton, binding = "TOGGLEPROFESSIONBOOK",
+			wanted = function() return ns.On() and Replaces() and ns.Professions()[1] ~= nil end,
+			game = function()
+				local book = _G.ProfessionsBookFrame
+				return book and book:IsShown() and book or _G.ProfessionsFrame
+			end,
+			open = function() ns.Open() end, window = function() return window end })
+	end
 	if not (W and W.RegisterExtension) then return end
 	-- (built on Wanderer's API 16: an older Wanderer is only asked to update, nothing of it is called)
 	if (W.API or 1) < 16 then return W.Print(L.NEEDS_WANDERER) end

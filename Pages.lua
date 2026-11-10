@@ -125,7 +125,7 @@ local function PeopleRow(who)
 		if #waits < 2 then waits[#waits + 1] = state end
 	end
 	local r, g, b = U.ClassColor(who.class)
-	return { icon = "Interface\\Icons\\ClassIcon_" .. tostring(who.class or "Warrior"), title = who.name, titleColor = { r, g, b },
+	return { icon = "Interface\\Icons\\ClassIcon_" .. tostring(who.class or "Warrior"), title = who.name, titleColor = r and { r, g, b } or nil,
 		note = crafts[1] and table.concat(crafts, "  ·  ") or L.PEOPLE_NO_CRAFT, right = table.concat(waits, "  ·  "), tip = tips[2] and tips or nil }
 end
 
