@@ -41,17 +41,25 @@ ns.Changed = U and U.Debounce(0.05, Tell) or function() end
 
 -- The professions --------------------------------------------------------------------------------------------
 
--- Those of this character that make something: { name, icon, rank, most, line }.
-function ns.Professions()
-	local list = {}
+-- Those of this character that make something: { name, icon, rank, most, line }. withGathering: the gathering ones
+-- too, after them, marked gather (their skill on the rail; Forever gives some of them things to make, read once
+-- they are opened like the others).
+function ns.Professions(withGathering)
+	local list, gathering = {}, {}
 	for _, known in ipairs(U.Professions()) do
-		if known.line and not NOTHING_TO_MAKE[known.line] then list[#list + 1] = known end
+		if known.line and not NOTHING_TO_MAKE[known.line] then
+			list[#list + 1] = known
+		elseif known.line and withGathering then
+			known.gather = true
+			gathering[#gathering + 1] = known
+		end
 	end
+	for _, known in ipairs(gathering) do list[#list + 1] = known end
 	return list
 end
 
-function ns.Profession(line)
-	for _, known in ipairs(ns.Professions()) do
+function ns.Profession(line, withGathering)
+	for _, known in ipairs(ns.Professions(withGathering)) do
 		if known.line == line then return known end
 	end
 end
@@ -355,8 +363,9 @@ function ns.ToShopping(recipe, times)
 	if not (auction and auction.AddToShopping) then return 0 end
 	local sent = 0
 	for _, reagent in ipairs(recipe.reagents) do
-		local missing = reagent.need * times - ns.Owned(reagent.id)
-		if missing > 0 and auction.AddToShopping(reagent.id, missing, recipe.name, true) then sent = sent + 1 end
+		-- (the list counts the total to carry: the whole need goes, only for what the bags lack)
+		local wanted = reagent.need * times
+		if wanted > ns.Owned(reagent.id) and auction.AddToShopping(reagent.id, wanted, recipe.name, true) then sent = sent + 1 end
 	end
 	return sent
 end
@@ -364,7 +373,7 @@ end
 -- Never a route: the two or three crafts that help now. Those of a sure point first, then what you can already
 -- make, then the cheapest when the prices are known.
 function ns.Suggestions(line)
-	local profession = ns.Profession(line)
+	local profession = ns.Profession(line, true)
 	local list = ns.Recipes(line)
 	if not (profession and list) or (not preview and profession.rank >= profession.most) then return EMPTY end
 	local found = {}

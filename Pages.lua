@@ -9,7 +9,8 @@ local W = Wanderer
 local U = W and W.Util
 local Skin = W and W.Skin
 
-local ROW_HEIGHT = 46
+-- (the kit's rich row: as many as the page holds; read as it is, an older Wanderer has none)
+local ROW_HEIGHT = (Skin and rawget(Skin, "ROW") or { rich = 54 }).rich
 local LIST_TOP = 72
 local MOST_RESULTS = 100
 local EMPTY = {}
@@ -228,7 +229,7 @@ end
 
 local function SpecsView()
 	local line = ns.CurrentLine()
-	local profession = ns.Profession(line)
+	local profession = ns.Profession(line, true)
 	local rows = {}
 	-- (each side has its own quest for the same specialization)
 	local specs, seen = {}, {}
@@ -285,20 +286,17 @@ local function NewRow(parent)
 	row.action = Skin.SmallButton(row, "", function(self) if self.run then self.run() end end, function() return row.action.tip or "" end)
 	row.action:SetPoint("RIGHT", -6, 0)
 	row:SetScript("OnEnter", function(self)
-		self.ground:SetColorTexture(1, 1, 1, 0.07)
+		-- (the kit's hover tint)
+		self.ground:SetColorTexture(1, 1, 1, 0.03 + (Skin.HOVER or 0.05))
 		local data = self.data
-		if data and data.item then
-			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-			GameTooltip:SetItemByID(data.item)
-			GameTooltip:Show()
-		elseif data and data.tip then
-			Skin.ShowTip(self, data.tip, "ANCHOR_RIGHT")
-		end
+		if data and data.tip and not data.item then Skin.ShowTip(self, data.tip, "ANCHOR_RIGHT") end
 	end)
 	row:SetScript("OnLeave", function(self)
 		self.ground:SetColorTexture(1, 1, 1, 0.03)
 		GameTooltip:Hide()
 	end)
+	-- (an item's row: the item itself under the mouse)
+	Skin.ItemTooltip(row, function(self) return self.data and self.data.item end, "ANCHOR_RIGHT")
 	row:SetScript("OnClick", function(self) if self.data and self.data.onClick then self.data.onClick() end end)
 	return row
 end
@@ -308,7 +306,7 @@ local function FillRow(row, data)
 	row.icon:Set(data.icon, data.quality)
 	row.icon.texture:SetDesaturated(data.faded or false)
 	row.title:SetText(data.title)
-	if data.titleColor then row.title:SetTextColor(data.titleColor[1], data.titleColor[2], data.titleColor[3]) else row.title:SetTextColor(0.93, 0.9, 0.82) end
+	if data.titleColor then row.title:SetTextColor(data.titleColor[1], data.titleColor[2], data.titleColor[3]) else row.title:SetTextColor(Skin.COLORS.text[1], Skin.COLORS.text[2], Skin.COLORS.text[3]) end
 	row.note:SetText(data.note or "")
 	row.right:SetText(data.right or "")
 	row.action:SetShown(data.action ~= nil)

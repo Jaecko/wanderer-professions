@@ -30,6 +30,10 @@ local MAX_AMOUNT = 200
 local SAME_JOB = { "Skillet", "Skillet-Classic", "Mastercraft", "ForeverArtisan", "NaowhForeverProfessions" }
 local SKILL_COLORS = { red = { 0.85, 0.25, 0.25 }, orange = { 1, 0.5, 0.25 }, yellow = { 1, 0.85, 0.1 },
 	green = { 0.3, 0.8, 0.3 }, grey = { 0.55, 0.55, 0.55 } }
+-- (the kit's gold, and its tints under the mouse and on the chosen row)
+local GOLD = Skin and Skin.COLORS.gold
+-- (read as they are: an older Wanderer has neither)
+local HOVER, CHOSEN = Skin and rawget(Skin, "HOVER") or 0.05, Skin and rawget(Skin, "CHOSEN") or 0.1
 local SKILL_WORDS = { red = "COLOR_RED", orange = "COLOR_ORANGE", yellow = "COLOR_YELLOW", green = "COLOR_GREEN", grey = "COLOR_GREY" }
 local SKILL_TONES = { red = "red", orange = "gold", yellow = "gold", green = "green", grey = "grey" }
 local CONFIDENCE = { read = { "CHIP_READ", "CHIP_READ_DESC", "green" }, data = { "CHIP_DATA", "CHIP_DATA_DESC", "blue" },
@@ -184,7 +188,7 @@ local function NewRow(parent)
 	row.bar:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -10, 8)
 	row.note = Skin.Text(row, "GameTooltipTextSmall", "muted")
 	row.note:SetPoint("BOTTOMLEFT", row.icon, "BOTTOMRIGHT", 8, 2)
-	row:SetScript("OnEnter", function(self) if not self.chosen then self.ground:SetColorTexture(1, 1, 1, 0.05) end end)
+	row:SetScript("OnEnter", function(self) if not self.chosen then self.ground:SetColorTexture(1, 1, 1, HOVER) end end)
 	row:SetScript("OnLeave", function(self) if not self.chosen then self.ground:SetColorTexture(0, 0, 0, 0) end end)
 	row:SetScript("OnClick", function(self, button) ChooseRecipe(self.recipe, button) end)
 	return row
@@ -192,7 +196,7 @@ end
 
 local function FillRow(row, recipe, chosen, rank)
 	row.recipe, row.chosen = recipe, chosen
-	if chosen then row.ground:SetColorTexture(1, 0.82, 0, 0.12) else row.ground:SetColorTexture(0, 0, 0, 0) end
+	if chosen then row.ground:SetColorTexture(GOLD[1], GOLD[2], GOLD[3], CHOSEN) else row.ground:SetColorTexture(0, 0, 0, 0) end
 	local can = recipe.learned and ns.CanMake(recipe) or 0
 	row.icon:Set(recipe.icon, Quality(recipe.item))
 	row.icon.texture:SetDesaturated(can == 0)
@@ -235,7 +239,7 @@ local function FillGrid(grid, recipes, chosenId)
 			cell.icon:Set(recipe.icon, Quality(recipe.item))
 			cell.icon.texture:SetDesaturated(can == 0)
 			cell.count:SetText(can > 0 and can or "")
-			if recipe.id == chosenId then cell.icon.edges.Color(1, 0.82, 0, 1) end
+			if recipe.id == chosenId then cell.icon.edges.Color(GOLD[1], GOLD[2], GOLD[3], 1) end
 		end
 	end
 end
@@ -260,7 +264,7 @@ local function DrawList(recipe)
 	entries = Entries()
 	local room = ui.rows:GetHeight()
 	offset = math.max(0, math.min(offset, #entries - math.floor(room / ROW_HEIGHT)))
-	local profession = ns.Profession(current)
+	local profession = ns.Profession(current, true)
 	local rank = profession and profession.rank
 	local chosen = recipe and recipe.id
 	local headers, rows, grids, shown, y = 0, 0, 0, 0, 0
@@ -384,11 +388,22 @@ end
 
 local function DrawRail(list)
 	DrawPageButtons()
+	-- (as many professions as fit above the pages: the rows closer, the icons smaller, when there are many)
+	local pages = #ns.PagesFor(current)
+	local height = U.Clean(U.Safe(window.GetHeight, window)) or HEIGHT
+	local room = height - TOP - ui.margin - pages * PAGE_BUTTON - 8
+	local row = math.max(36, math.min(RAIL_ROW, math.floor(room / math.max(1, math.min(#list, MAX_PROFESSIONS)))))
+	local icon = math.max(22, math.min(40, row - 22))
 	for index = 1, MAX_PROFESSIONS do
 		local known = list[index]
 		if known or ui.rail[index] then
 			local button = RailButton(index)
 			button:SetShown(known ~= nil)
+			button:SetSize(RAIL, row - 4)
+			button:ClearAllPoints()
+			button:SetPoint("TOPLEFT", window, "TOPLEFT", ui.margin, -TOP - (index - 1) * row)
+			button.icon:SetSize(icon, icon)
+			button.icon.ring:SetSize(icon + 3, icon + 3)
 			if known then
 				local here = known.line == current
 				button.profession = known
@@ -726,7 +741,7 @@ local function DrawSuggestions(recipe)
 			local cost = found.cost < math.huge and U.Coins(found.cost)
 			local state = found.can > 0 and L.PROGRESS_CAN:format(found.can) or L.PROGRESS_SHORT
 			card.note:SetText(cost and state .. "  ·  " .. cost or state)
-			card.ground:SetColorTexture(1, 0.82, 0, found.recipe.id == (recipe and recipe.id) and 0.1 or 0.03)
+			card.ground:SetColorTexture(GOLD[1], GOLD[2], GOLD[3], found.recipe.id == (recipe and recipe.id) and CHOSEN or 0.03)
 		end
 	end
 end
@@ -767,7 +782,7 @@ local function DrawHero(recipe, rank)
 	ui.plate.texture:SetDesaturated(not recipe.learned)
 	ui.kicker:SetText(U.Upper(recipe.learned and recipe.category or L.NOTE_TO_LEARN))
 	ui.title:SetText(recipe.name)
-	if quality then ui.title:SetTextColor(U.QualityColor(quality)) else ui.title:SetTextColor(1, 0.82, 0) end
+	if quality then ui.title:SetTextColor(U.QualityColor(quality)) else ui.title:SetTextColor(Skin.COLORS.gold[1], Skin.COLORS.gold[2], Skin.COLORS.gold[3]) end
 	DrawChips(recipe, color)
 	DrawTimeline(recipe, rank)
 	ui.source:SetText(SourceWords(recipe))
@@ -802,10 +817,13 @@ end
 function ns.Draw()
 	if not (window and window:IsShown()) then return end
 	ns.ForgetCounts()
-	local professions = ns.Professions()
-	if not ns.Profession(current) then current = ns.Profession(ns.DB().last) and ns.DB().last or (professions[1] and professions[1].line) end
+	-- (the gathering professions too, after the others: their skill on the rail, what they make if they make any)
+	local professions = ns.Professions(true)
+	if not ns.Profession(current, true) then
+		current = ns.Profession(ns.DB().last, true) and ns.DB().last or (professions[1] and professions[1].line)
+	end
 	DrawRail(professions)
-	local profession = ns.Profession(current)
+	local profession = ns.Profession(current, true)
 	local seen = ns.PreviewRank()
 	ui.whatIf:SetText(seen and Skin.Colorize(L.WHAT_IF:format(seen), "gold") or L.WHAT_IF_OFF)
 	ui.whatIfReset:SetShown(seen ~= nil and not ns.CurrentPage())
@@ -826,8 +844,9 @@ function ns.Draw()
 	ui.prompt:SetShown(not recipe)
 	ui.stage:SetShown(recipe ~= nil)
 	if not recipe then
-		ui.promptTitle:SetText(profession and L.NOT_READ_TITLE or L.NONE_TITLE)
-		ui.promptText:SetText(profession and L.NOT_READ_TEXT or L.NONE_TEXT)
+		ui.promptTitle:SetText(profession and (profession.gather and profession.name or L.NOT_READ_TITLE) or L.NONE_TITLE)
+		ui.promptText:SetText(profession and (profession.gather and L.GATHER_TEXT:format(profession.rank or 0, profession.most or 0)
+			or L.NOT_READ_TEXT) or L.NONE_TEXT)
 		ui.promptButton:SetShown(profession ~= nil)
 		return
 	end
@@ -933,10 +952,10 @@ local function BuildList()
 	track:SetHeight(2)
 	track:SetPoint("LEFT")
 	track:SetPoint("RIGHT")
-	track:SetColorTexture(0.85, 0.75, 0.5, 0.35)
+	track:SetColorTexture(Skin.COLORS.kicker[1], Skin.COLORS.kicker[2], Skin.COLORS.kicker[3], 0.35)
 	local thumb = slider:CreateTexture(nil, "ARTWORK")
 	thumb:SetSize(8, 14)
-	thumb:SetColorTexture(1, 0.82, 0, 0.9)
+	thumb:SetColorTexture(GOLD[1], GOLD[2], GOLD[3], 0.9)
 	slider:SetThumbTexture(thumb)
 	slider:SetScript("OnValueChanged", function(_, value, byUser)
 		if not byUser then return end
@@ -980,7 +999,7 @@ local function BuildHero(stage)
 	local ground = hero:CreateTexture(nil, "BACKGROUND")
 	ground:SetAllPoints()
 	ground:SetColorTexture(1, 1, 1, 0.03)
-	Skin.Edges(hero, 1, 0.82, 0, 0.14)
+	Skin.Edges(hero, GOLD[1], GOLD[2], GOLD[3], 0.14)
 	-- (the profession's emblem, large and faint, behind the piece)
 	ui.art = hero:CreateTexture(nil, "BORDER")
 	ui.art:SetPoint("TOPRIGHT", -4, -4)
@@ -991,14 +1010,13 @@ local function BuildHero(stage)
 	local plate = Skin.Icon(hero, PLATE)
 	plate:SetPoint("LEFT", 16, 0)
 	plate:EnableMouse(true)
-	plate:SetScript("OnEnter", function(self)
+	plate.padTip = true -- (a controller stops on it for its tooltip)
+	-- (what it makes under the mouse, else the recipe itself)
+	Skin.ItemTooltip(plate, function()
 		local recipe = Selected()
-		if not recipe then return end
-		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		if recipe.item then GameTooltip:SetItemByID(recipe.item) else GameTooltip:SetSpellByID(recipe.id) end
-		GameTooltip:Show()
-	end)
-	plate:SetScript("OnLeave", function() GameTooltip:Hide() end)
+		if not recipe then return nil end
+		return recipe.item or (recipe.id and "spell:" .. recipe.id) or nil
+	end, "ANCHOR_RIGHT")
 	ui.plate = plate
 	local right = ui.stageWidth - 16 - PLATE - 14 - 128
 	ui.kicker = Skin.Text(hero, "GameTooltipTextSmall", "kicker")
@@ -1015,6 +1033,7 @@ local function BuildHero(stage)
 	ui.chipTrust, ui.chipColor, ui.chipMade = Skin.Chip(hero), Skin.Chip(hero), Skin.Chip(hero)
 	ui.chipSpec, ui.chipWait, ui.chipFavor, ui.chipBind = Skin.Chip(hero), Skin.Chip(hero), Skin.Chip(hero), Skin.Chip(hero)
 	ui.chipTrust:EnableMouse(true)
+	ui.chipTrust.padTip = true
 	Skin.Tooltip(ui.chipTrust, function() return ui.chipTrust.tip or "" end)
 	local timeline = CreateFrame("Frame", nil, hero)
 	timeline:SetPoint("TOPLEFT", ui.title, "BOTTOMLEFT", 0, -34)
@@ -1151,6 +1170,8 @@ local function QueueCell(stage, index, y)
 	cell:SetSize(38, 38)
 	cell:SetPoint("TOPLEFT", stage, "TOPLEFT", (index - 1) * 42, y)
 	cell:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	-- (a controller: its top button takes it off the queue, as the right click)
+	cell.padRight, cell.padRightWord = true, L.PAD_UNQUEUE
 	cell.icon = Skin.Icon(cell, 38)
 	cell.icon:SetAllPoints()
 	cell.icon:EnableMouse(false)
@@ -1161,7 +1182,7 @@ local function QueueCell(stage, index, y)
 		current, picked[self.step.line] = self.step.line, self.step.id
 		ns.Draw()
 	end)
-	Skin.Tooltip(cell, function() return { cell.recipeName or "", L.QUEUE_CELL_DESC } end)
+	Skin.Tooltip(cell, function() return { cell.recipeName or "", (U.UsingPad and U.UsingPad()) and L.QUEUE_CELL_DESC_PAD or L.QUEUE_CELL_DESC } end)
 	return cell
 end
 
@@ -1229,6 +1250,8 @@ local function Create()
 	Skin.Sounds(window, Skin.SOUNDS.open, Skin.SOUNDS.close)
 	Skin.Dress(window, { "CENTER", UIParent, "CENTER", 0, 30 }, "professionsPos")
 	local _, _, margin = Skin.Header(window, "Wanderer", L.TITLE, { settings = "ext:professions" })
+	-- (the heading's "?": what the workbench does, in a few words)
+	if Skin.Help then Skin.Help(window, L.HELP_TIP, "HEADING") end
 	ui = { margin = margin, rail = {}, cards = {}, treeRows = {}, pageButtons = {}, headerPool = {}, rowPool = {}, gridPool = {} }
 	ui.stageWidth = WIDTH - margin * 2 - RAIL - 10 - LIST_WIDTH - STAGE_GAP
 	BuildList()
@@ -1363,7 +1386,7 @@ ns.State = function() return { current = current, mode = mode, atBench = atBench
 
 BINDING_HEADER_WANDERERPROFESSIONS = "Wanderer Professions"
 BINDING_NAME_WANDERERPROFESSIONS_TOGGLE = L.TITLE
-function WandererProfessions_Toggle() ns.Toggle() end
+function WandererProfessions_Toggle() if ns.ready then ns.Toggle() end end -- (nothing before Init has passed Wanderer's check)
 
 -- The game's key for the professions opens the workbench: an override for this session, so your own key bindings
 -- are never rewritten and everything goes back by itself when this is off.
@@ -1411,6 +1434,9 @@ local function OnEvent(_, event, unit, second, spell, fourth)
 end
 
 function ns.Init()
+	if not (W and W.RegisterExtension) then return end
+	-- (built on Wanderer's API 16: an older Wanderer is only asked to update, nothing of it is called)
+	if (W.API or 1) < 16 then return W.Print(L.NEEDS_WANDERER) end
 	-- (the controller's wheel: the workbench in front of the game's window, when it replaces it)
 	if W and W.Skin and W.Skin.PadStandIn then
 		W.Skin.PadStandIn({ micro = _G.ProfessionMicroButton, binding = "TOGGLEPROFESSIONBOOK",
@@ -1421,9 +1447,6 @@ function ns.Init()
 			end,
 			open = function() ns.Open() end, window = function() return window end })
 	end
-	if not (W and W.RegisterExtension) then return end
-	-- (built on Wanderer's API 16: an older Wanderer is only asked to update, nothing of it is called)
-	if (W.API or 1) < 16 then return W.Print(L.NEEDS_WANDERER) end
 	W.RegisterExtension({
 		key = "professions",
 		addon = ADDON,
@@ -1476,6 +1499,7 @@ function ns.Init()
 		events:RegisterUnitEvent(event, "player")
 	end
 	events:SetScript("OnEvent", OnEvent)
+	ns.ready = true
 end
 
 if W and W.WhenLoaded then W.WhenLoaded(ADDON, ns.Init) elseif W and W.Print then W.Print(L.NEEDS_WANDERER) end

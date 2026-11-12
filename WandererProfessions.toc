@@ -12,7 +12,7 @@
 ## Notes-zhCN: 一个安静直观的专业技能工作台：每个配方都带图标，材料以卡片显示，还有接下来值得制作的物品和一个队列。
 ## Notes-zhTW: 一個安靜直觀的專業技能工作台：每個配方都附圖示，材料以卡片顯示，還有接下來值得製作的物品和一個佇列。
 ## Category: Professions
-## Version: 1.0.2
+## Version: 1.0.4
 ## Author: Jaekco
 ## IconTexture: Interface\Icons\Trade_BlackSmithing
 ## RequiredDeps: Wanderer
