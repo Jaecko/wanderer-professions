@@ -302,6 +302,29 @@ function ns.CanMake(recipe)
 	return most
 end
 
+-- What a recipe asks besides its reagents (an anvil, a forge, a fire, a hammer, a rod), as the game says it for the
+-- profession open now: { { name, met } }, empty when the game says nothing (or for another profession).
+function ns.Requirements(recipe)
+	local out = {}
+	local ui = C_TradeSkillUI
+	if not (recipe and recipe.line == live and ui and ui.GetRecipeRequirements) then return out end
+	local list = Safe(ui.GetRecipeRequirements, recipe.id)
+	for _, need in ipairs(type(list) == "table" and list or EMPTY) do
+		local name = type(need) == "table" and Clean(need.name)
+		if type(name) == "string" and name ~= "" then out[#out + 1] = { name = name, met = Clean(need.met) and true or false } end
+	end
+	return out
+end
+
+-- The names of what a recipe asks and you lack now ("Anvil, Blacksmith Hammer"), else nil.
+function ns.Unmet(recipe)
+	local names = {}
+	for _, need in ipairs(ns.Requirements(recipe)) do
+		if not need.met then names[#names + 1] = need.name end
+	end
+	return names[1] and table.concat(names, ", ") or nil
+end
+
 -- The share of the reagents of one craft you carry (0 to 1).
 function ns.Share(recipe)
 	local have, need = 0, 0
@@ -319,8 +342,6 @@ function ns.ItemTraits(item)
 	local armor = Clean(class) == ARMOR_CLASS and ARMOR_KINDS[Clean(subClass)] and Clean(subType) or nil
 	return bind == 1 and "BIND_PICKUP" or bind == 2 and "BIND_EQUIP" or nil, armor
 end
-
-function ns.BindOf(item) return (ns.ItemTraits(item)) end
 
 -- Words that may be missing, joined.
 function ns.Joined(...)

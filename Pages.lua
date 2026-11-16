@@ -62,7 +62,7 @@ local function Reputation(favor)
 end
 
 local function Bound(item)
-	local bind = item and ns.BindOf(item)
+	local bind = item and (ns.ItemTraits(item))
 	return bind and L[bind] or nil
 end
 

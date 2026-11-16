@@ -46,7 +46,8 @@ function ns.OnGuildMessage(prefix, text, channel, sender)
 	if not spell or channel ~= (kind == "?" and "GUILD" or "WHISPER") then return end
 	local short = Ambiguate and Ambiguate(sender, "short") or sender
 	if kind == "!" then
-		answers[spell] = answers[spell] or {}
+		-- (only for a question you asked: an answer nobody asked for is let go)
+		if not answers[spell] then return end
 		answers[spell][short] = true
 		return ns.Changed()
 	end

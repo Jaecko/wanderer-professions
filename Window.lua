@@ -23,13 +23,15 @@ local STAGE_GAP = 14
 local HERO_HEIGHT, PLATE = 160, 96
 local CARD_HEIGHT, MAX_CARDS = 42, 8
 local TREE_ROW = 21
+local TREE_MOST = 12 -- (a deep tree: its rows drawn closer so all fit the cards' room)
 local HIGHEST_SKILL = 300
 local PAGE_BUTTON = 46
-local MAX_AMOUNT = 200
+local MAX_AMOUNT = 999 -- (what the amount's box holds)
 -- The other addons that are this same window: the workbench steps aside (one click away, by the link).
 local SAME_JOB = { "Skillet", "Skillet-Classic", "Mastercraft", "ForeverArtisan", "NaowhForeverProfessions" }
-local SKILL_COLORS = { red = { 0.85, 0.25, 0.25 }, orange = { 1, 0.5, 0.25 }, yellow = { 1, 0.85, 0.1 },
-	green = { 0.3, 0.8, 0.3 }, grey = { 0.55, 0.55, 0.55 } }
+-- (the game's tones, lifted where they would fade on the dark ground or a chosen row)
+local SKILL_COLORS = { red = { 1, 0.38, 0.35 }, orange = { 1, 0.5, 0.25 }, yellow = { 1, 0.85, 0.1 },
+	green = { 0.3, 0.8, 0.3 }, grey = { 0.6, 0.6, 0.6 } }
 -- (the kit's gold, and its tints under the mouse and on the chosen row)
 local GOLD = Skin and Skin.COLORS.gold
 -- (read as they are: an older Wanderer has neither)
@@ -73,7 +75,35 @@ end
 
 local function LinkOf(item) return item and select(2, U.ItemInfo(item)) end
 
+-- A link in the chat: Wanderer Chat's answer line first while you write in it (once, never twice), else the
+-- game's chat box (opened when none is).
+local function ChatLink(link)
+	local chat = rawget(_G, "WandererChat")
+	if type(chat) == "table" and chat.Insert and chat.Insert(link) then return true end
+	return U.ChatInsert(link)
+end
+
+-- The game's modified clicks on an item: Shift links it in the chat, Ctrl tries it on; true when done. (An older
+-- Wanderer has no Util.ItemClick.)
+local ItemClick = U and rawget(U, "ItemClick") or function(link)
+	if not (link and IsModifiedClick()) then return end
+	if IsShiftKeyDown() and ChatLink(link) then return true end
+	if HandleModifiedItemClick then HandleModifiedItemClick(link) return true end
+end
+
 local function Quality(item) return item and U.ItemQuality(item) end
+
+-- A recipe in the chat: the game's link of the recipe, else what it makes, else its spell (an enchant).
+local function RecipeLink(recipe)
+	local trade = C_TradeSkillUI
+	local link = trade and trade.GetRecipeLink and U.Clean(U.Safe(trade.GetRecipeLink, recipe.id))
+	if type(link) == "string" and link ~= "" then return link end
+	link = LinkOf(recipe.item)
+	if link then return link end
+	local spellLink = (C_Spell and C_Spell.GetSpellLink) or _G.GetSpellLink
+	link = spellLink and recipe.id and U.Clean(U.Safe(spellLink, recipe.id))
+	return type(link) == "string" and link ~= "" and link or nil
+end
 
 -- The chosen recipe (first time here: what helps now, or the first one you know).
 local function Selected()
@@ -139,8 +169,8 @@ end
 
 local function ChooseRecipe(recipe, button)
 	if button == "LeftButton" and IsShiftKeyDown() then
-		local link = LinkOf(recipe.item)
-		if link then U.ChatInsert(link) end
+		local link = RecipeLink(recipe)
+		if link then ChatLink(link) end
 		return
 	end
 	picked[current] = recipe.id
@@ -191,6 +221,11 @@ local function NewRow(parent)
 	row:SetScript("OnEnter", function(self) if not self.chosen then self.ground:SetColorTexture(1, 1, 1, HOVER) end end)
 	row:SetScript("OnLeave", function(self) if not self.chosen then self.ground:SetColorTexture(0, 0, 0, 0) end end)
 	row:SetScript("OnClick", function(self, button) ChooseRecipe(self.recipe, button) end)
+	-- (what it makes, else the recipe itself: the game's own tooltip, as on the wall of icons)
+	Skin.ItemTooltip(row, function(self)
+		local recipe = self.recipe
+		return recipe and (recipe.item or (recipe.id and "spell:" .. recipe.id)) or nil
+	end, "ANCHOR_RIGHT")
 	return row
 end
 
@@ -223,13 +258,17 @@ local function NewGrid(parent)
 		cell.count = Skin.Text(cell.icon, "NumberFontNormal", "text")
 		cell.count:SetPoint("BOTTOMRIGHT", -3, 3)
 		cell:SetScript("OnClick", function(self, button) ChooseRecipe(self.recipe, button) end)
-		Skin.Tooltip(cell, function() return cell.recipe and cell.recipe.name or "" end, "ANCHOR_RIGHT")
+		-- (what it makes, else the recipe itself: the game's own tooltip, as on the stage)
+		Skin.ItemTooltip(cell, function(self)
+			local recipe = self.recipe
+			return recipe and (recipe.item or (recipe.id and "spell:" .. recipe.id)) or nil
+		end, "ANCHOR_RIGHT")
 		grid.cells[index] = cell
 	end
 	return grid
 end
 
-local function FillGrid(grid, recipes, chosenId)
+local function FillGrid(grid, recipes, chosenId, rank)
 	for index, cell in ipairs(grid.cells) do
 		local recipe = recipes[index]
 		cell:SetShown(recipe ~= nil)
@@ -239,7 +278,13 @@ local function FillGrid(grid, recipes, chosenId)
 			cell.icon:Set(recipe.icon, Quality(recipe.item))
 			cell.icon.texture:SetDesaturated(can == 0)
 			cell.count:SetText(can > 0 and can or "")
-			if recipe.id == chosenId then cell.icon.edges.Color(GOLD[1], GOLD[2], GOLD[3], 1) end
+			-- (the edge in the skill's color, as the list's names: the chosen one in gold)
+			local color = recipe.learned and SKILL_COLORS[ns.Color(recipe, rank)]
+			if recipe.id == chosenId then
+				cell.icon.edges.Color(GOLD[1], GOLD[2], GOLD[3], 1)
+			elseif color then
+				cell.icon.edges.Color(color[1], color[2], color[3], 0.9)
+			end
 		end
 	end
 end
@@ -291,7 +336,7 @@ local function DrawList(recipe)
 			local frame
 			frame, grids = Pooled(ui.gridPool, grids, NewGrid)
 			place(frame, height)
-			FillGrid(frame, entry.cells, chosen)
+			FillGrid(frame, entry.cells, chosen, rank)
 		else
 			local frame
 			frame, rows = Pooled(ui.rowPool, rows, NewRow)
@@ -480,6 +525,9 @@ local function DrawChips(recipe, color)
 	end
 	local spec = SpecNeeded(recipe)
 	ui.chipSpec:Set(spec and L.CHIP_NEEDS_SPEC:format(spec) or nil, "red")
+	-- (an anvil, a forge, a fire, a hammer... the game asks and you lack now, in red)
+	local unmet = recipe.learned and ns.Unmet(recipe)
+	ui.chipTools:Set(unmet and L.CHIP_NEEDS_SPEC:format(unmet) or nil, "red")
 	local left = recipe.learned and ns.CooldownLeft(recipe)
 	ui.chipWait:Set(left and L.CHIP_COOLDOWN:format(ns.WaitWords(left)) or nil, "blue")
 	local favor = not recipe.learned and ns.FavorOf(recipe.id)
@@ -492,7 +540,7 @@ local function DrawChips(recipe, color)
 	local trust = CONFIDENCE[recipe.confidence]
 	ui.chipTrust:Set(L[trust[1]], trust[3])
 	ui.chipTrust.tip = L[trust[2]]
-	PlaceChips({ ui.chipColor, ui.chipSpec, ui.chipWait, ui.chipFavor, ui.chipBind, ui.chipMade, ui.chipTrust })
+	PlaceChips({ ui.chipColor, ui.chipTools, ui.chipSpec, ui.chipWait, ui.chipFavor, ui.chipBind, ui.chipMade, ui.chipTrust })
 end
 
 -- Who else can make it: your other characters, and the guild when asked.
@@ -581,10 +629,8 @@ local function NewCard(index)
 	card.where:SetWordWrap(false)
 	Skin.ItemTooltip(card, function(self) return self.item end)
 	card:SetScript("OnClick", function(self)
-		if IsShiftKeyDown() then
-			local link = LinkOf(self.item)
-			if link then U.ChatInsert(link) end
-		elseif self.maker then
+		if ItemClick(LinkOf(self.item)) then return end
+		if self.maker then
 			ns.GoToRecipe(self.maker.line, self.maker.id)
 		end
 	end)
@@ -658,6 +704,7 @@ local function TreeRow(index)
 	row.have:SetPoint("RIGHT", -4, 0)
 	Skin.ItemTooltip(row, function(self) return self.item end)
 	row:SetScript("OnClick", function(self)
+		if ItemClick(LinkOf(self.item)) then return end
 		if self.maker then ns.GoToRecipe(self.maker.line, self.maker.id) end
 	end)
 	ui.treeRows[index] = row
@@ -667,12 +714,20 @@ end
 local function DrawTree(recipe)
 	local times, running = Times(recipe)
 	local rows = showTree and ns.Tree(recipe, times) or {}
-	for index = 1, MAX_CARDS do
+	local room = MAX_CARDS * TREE_ROW
+	local step = math.min(TREE_ROW, math.floor(room / math.max(1, #rows)))
+	for index = 1, TREE_MOST do
 		local data = rows[index]
 		local row = (data or ui.treeRows[index]) and TreeRow(index)
 		if row then
 			row:SetShown(data ~= nil)
 			if data then
+				local top = -HERO_HEIGHT - 26 - (index - 1) * step
+				row:SetHeight(step - 1)
+				row:ClearAllPoints()
+				row:SetPoint("TOPLEFT", ui.stage, "TOPLEFT", 0, top)
+				row:SetPoint("TOPRIGHT", ui.stage, "TOPRIGHT", 0, top)
+				row.icon:SetSize(math.min(18, step - 3), math.min(18, step - 3))
 				local name = U.ItemName(data.id)
 				if not name then U.LoadItem(data.id) end
 				row.item, row.maker = data.id, data.maker
@@ -703,6 +758,7 @@ local function DrawActions(recipe, can)
 	local isKnown, isLive = recipe.learned and not run, recipe.line == ns.LiveLine()
 	for _, widget in ipairs({ ui.minus, ui.amount, ui.plus, ui.maximum, ui.addQueue, ui.create }) do widget:SetShown(isKnown) end
 	ui.actionNote:SetShown(not recipe.learned)
+	ui.create.why = nil
 	if run then return end
 	if not isKnown then
 		ui.actionNote:SetText(L.NOTE_NOT_YET)
@@ -719,7 +775,10 @@ local function DrawActions(recipe, can)
 		-- (what will really be made: never more than the bags allow)
 		local count = math.max(math.min(amount, can), 1)
 		ui.create:SetLabel(count > 1 and L.CREATE_MANY:format(count) or L.CREATE)
-		ui.create:SetEnabled(can > 0 and not ns.CooldownLeft(recipe))
+		-- (a tool or a place missing: the game would refuse, so the button says why instead)
+		local unmet = ns.Unmet(recipe)
+		ui.create:SetEnabled(can > 0 and not ns.CooldownLeft(recipe) and not unmet)
+		ui.create.why = unmet and L.CHIP_NEEDS_SPEC:format(unmet) or nil
 	else
 		ui.create:SetLabel(L.OPEN_PROFESSION)
 		ui.create:SetEnabled(true)
@@ -791,6 +850,13 @@ local function DrawHero(recipe, rank)
 	DrawModel(recipe)
 end
 
+-- The game's profession book, as its own key opens it.
+local function OpenBook()
+	if InCombatLockdown() then return W.Print(L.IN_FIGHT) end
+	if _G.ToggleProfessionsBook then return U.Safe(_G.ToggleProfessionsBook) end
+	if _G.ToggleSpellBook and _G.BOOKTYPE_PROFESSION then return U.Safe(_G.ToggleSpellBook, _G.BOOKTYPE_PROFESSION) end
+end
+
 local function DrawHeading(profession)
 	ui.heading:SetShown(profession ~= nil)
 	if not profession then return end
@@ -811,6 +877,13 @@ local function DrawHeading(profession)
 	end
 	ui.art:SetTexture(profession.icon)
 	ui.gameButton:SetShown(atBench)
+	ui.bookButton:ClearAllPoints()
+	if atBench then
+		ui.bookButton:SetPoint("RIGHT", ui.gameButton, "LEFT", -6, 0)
+	else
+		ui.bookButton:SetPoint("TOPRIGHT", window, "TOPRIGHT", -62, -8)
+	end
+	ui.bookButton:SetShown(_G.ToggleProfessionsBook ~= nil or (_G.ToggleSpellBook ~= nil and _G.BOOKTYPE_PROFESSION ~= nil))
 end
 
 -- All of it, from what is known now.
@@ -847,7 +920,8 @@ function ns.Draw()
 		ui.promptTitle:SetText(profession and (profession.gather and profession.name or L.NOT_READ_TITLE) or L.NONE_TITLE)
 		ui.promptText:SetText(profession and (profession.gather and L.GATHER_TEXT:format(profession.rank or 0, profession.most or 0)
 			or L.NOT_READ_TEXT) or L.NONE_TEXT)
-		ui.promptButton:SetShown(profession ~= nil)
+		-- (a gathering profession has no window to open: its book is in the heading)
+		ui.promptButton:SetShown(profession ~= nil and not profession.gather)
 		return
 	end
 	ns.ReadSource(recipe)
@@ -1017,6 +1091,11 @@ local function BuildHero(stage)
 		if not recipe then return nil end
 		return recipe.item or (recipe.id and "spell:" .. recipe.id) or nil
 	end, "ANCHOR_RIGHT")
+	-- (Shift: what it makes linked in the chat, as on the game's profession window; Ctrl: tried on)
+	plate:SetScript("OnMouseUp", function(_, button)
+		local recipe = Selected()
+		if button == "LeftButton" and recipe then ItemClick(LinkOf(recipe.item) or RecipeLink(recipe)) end
+	end)
 	ui.plate = plate
 	local right = ui.stageWidth - 16 - PLATE - 14 - 128
 	ui.kicker = Skin.Text(hero, "GameTooltipTextSmall", "kicker")
@@ -1032,6 +1111,7 @@ local function BuildHero(stage)
 	ui.heroRight = right
 	ui.chipTrust, ui.chipColor, ui.chipMade = Skin.Chip(hero), Skin.Chip(hero), Skin.Chip(hero)
 	ui.chipSpec, ui.chipWait, ui.chipFavor, ui.chipBind = Skin.Chip(hero), Skin.Chip(hero), Skin.Chip(hero), Skin.Chip(hero)
+	ui.chipTools = Skin.Chip(hero)
 	ui.chipTrust:EnableMouse(true)
 	ui.chipTrust.padTip = true
 	Skin.Tooltip(ui.chipTrust, function() return ui.chipTrust.tip or "" end)
@@ -1079,7 +1159,7 @@ end
 
 local function BuildActions(stage)
 	local y = -HERO_HEIGHT - 26 - (MAX_CARDS / 2) * CARD_HEIGHT - 2
-	ui.minus = Skin.GlyphButton(stage, "down", 14, L.LESS, function() SetAmount(amount - 1) end)
+	ui.minus = Skin.GlyphButton(stage, "minus", 14, L.LESS, function() SetAmount(amount - 1) end)
 	ui.minus:SetPoint("TOPLEFT", stage, "TOPLEFT", 0, y - 2)
 	ui.amount = Skin.CreateInput(stage, nil, 3, { onChange = function(self, typed)
 		if not typed then return end
@@ -1092,11 +1172,15 @@ local function BuildActions(stage)
 	ui.amount:SetNumeric(true)
 	ui.amount:SetWidth(44)
 	ui.amount:SetPoint("LEFT", ui.minus, "RIGHT", 2, 0)
-	ui.plus = Skin.GlyphButton(stage, "up", 14, L.MORE, function() SetAmount(amount + 1) end)
+	ui.plus = Skin.GlyphButton(stage, "plus", 14, L.MORE, function() SetAmount(amount + 1) end)
 	ui.plus:SetPoint("LEFT", ui.amount, "RIGHT", 2, 0)
 	ui.maximum = Skin.SmallButton(stage, L.MAXIMUM, function()
 		local recipe = Selected()
-		if recipe then SetAmount(math.max(ns.CanMake(recipe), 1)) end
+		if not recipe then return end
+		local can = ns.CanMake(recipe)
+		-- (more than one run can hold: said, the most set)
+		if can > MAX_AMOUNT then W.Print(L.AMOUNT_CAPPED:format(MAX_AMOUNT, can)) end
+		SetAmount(math.max(can, 1))
 	end, L.MAXIMUM_DESC)
 	ui.maximum:SetPoint("LEFT", ui.plus, "RIGHT", 8, 0)
 	ui.create = Skin.Button(stage, L.CREATE, function()
@@ -1104,6 +1188,7 @@ local function BuildActions(stage)
 		if recipe then Start(recipe, math.max(math.min(amount, ns.CanMake(recipe)), 1)) end
 	end, "main")
 	ui.create:SetPoint("TOPRIGHT", stage, "TOPRIGHT", 0, y)
+	Skin.Tooltip(ui.create, function(self) return self.why end)
 	function ui.create:SetLabel(text)
 		self:SetText(text)
 		if self.Fit then self:Fit() end
@@ -1132,10 +1217,14 @@ local function BuildActions(stage)
 	ui.runBar:SetWidth(ui.stageWidth - 130)
 	ui.runStop = Skin.SmallButton(band, L.RUN_STOP, function() ns.StopRun() end, L.RUN_STOP_DESC)
 	ui.runStop:SetPoint("RIGHT", 0, 0)
+	local shownLeft = false -- (the seconds left written again only when they change, not every frame)
 	band:SetScript("OnUpdate", function()
 		local share, left = ns.RunProgress()
 		ui.runBar:Set(share)
-		ui.runLeft:SetText(left and L.RUN_LEFT:format(left) or "")
+		if left ~= shownLeft then
+			shownLeft = left
+			ui.runLeft:SetText(left and L.RUN_LEFT:format(left) or "")
+		end
 	end)
 	ui.runBand = band
 	ui.actionNote = Skin.Text(stage, "GameTooltipText", "soft")
@@ -1241,6 +1330,9 @@ local function BuildHeading()
 	ui.heading = heading
 	ui.gameButton = Skin.SmallButton(window, L.GAME_WINDOW, function() ns.UseGameWindow() end, L.GAME_WINDOW_DESC)
 	ui.gameButton:SetPoint("TOPRIGHT", window, "TOPRIGHT", -62, -8)
+	-- The game's profession book (Find Herbs, Find Minerals, unlearn): the professions key opens the workbench now.
+	ui.bookButton = Skin.SmallButton(window, L.PROFESSION_BOOK, OpenBook, L.PROFESSION_BOOK_DESC)
+	ui.bookButton:SetPoint("TOPRIGHT", window, "TOPRIGHT", -62, -8)
 end
 
 local function Create()
