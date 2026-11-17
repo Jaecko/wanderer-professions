@@ -1599,6 +1599,8 @@ local function Create()
 	BuildHeading()
 	window:HookScript("OnShow", function() ns.Draw() end)
 	window:HookScript("OnHide", function()
+		-- (the enchant's item picker goes with the bench: it chose for a recipe no longer on screen)
+		if picker then picker:Hide() end
 		if not leaving and atBench and mode == "wanderer" then ns.CloseProfession() end
 	end)
 	ns.OnChanged(function() ns.Draw() end)
@@ -1666,6 +1668,7 @@ local function Leave()
 	atBench = false
 	ns.ForgetRun()
 	ns.ForgetLive()
+	if picker then picker:Hide() end
 	if placeGame then placeGame() end
 	-- (going from one profession to another: the game closes the first, the window stays)
 	if pending then return end
