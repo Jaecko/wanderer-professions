@@ -36,6 +36,8 @@ local SKILL_COLORS = { red = { 1, 0.38, 0.35 }, orange = { 1, 0.5, 0.25 }, yello
 local GOLD = Skin and Skin.COLORS.gold
 -- (read as they are: an older Wanderer has neither)
 local HOVER, CHOSEN = Skin and rawget(Skin, "HOVER") or 0.05, Skin and rawget(Skin, "CHOSEN") or 0.1
+-- (the game look drawn: the game's own rows, headers and pictures; an older Wanderer has no such look)
+local function GameLook() return Skin ~= nil and rawget(Skin, "GameWindows") ~= nil and Skin.GameWindows() end
 local SKILL_WORDS = { red = "COLOR_RED", orange = "COLOR_ORANGE", yellow = "COLOR_YELLOW", green = "COLOR_GREEN", grey = "COLOR_GREY" }
 local SKILL_TONES = { red = "red", orange = "gold", yellow = "gold", green = "green", grey = "grey" }
 local CONFIDENCE = { read = { "CHIP_READ", "CHIP_READ_DESC", "green" }, data = { "CHIP_DATA", "CHIP_DATA_DESC", "blue" },
@@ -188,6 +190,14 @@ local function NewHeader(parent)
 	header.text:SetPoint("LEFT", 4, -1)
 	header.text:SetPoint("RIGHT", -4, -1)
 	header.text:SetJustifyH("LEFT")
+	-- (the game look: the game's own list header, its ground and its gold words, as on its skills)
+	if GameLook() then
+		header.ground = header:CreateTexture(nil, "BACKGROUND")
+		header.ground:SetAllPoints()
+		header.game = Skin.GameAtlas(header.ground, "common-button-list-collapseExpand")
+		header.ground:SetShown(header.game)
+		if _G.GameFontNormal then header.text:SetFontObject(Skin.FontFor("GameFontNormal")) end
+	end
 	header:SetScript("OnClick", function(self)
 		if not self.fold then return end
 		ns.DB().folded.toLearn = not self.closed
@@ -218,7 +228,11 @@ local function NewRow(parent)
 	row.bar:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -10, 8)
 	row.note = Skin.Text(row, "GameTooltipTextSmall", "muted")
 	row.note:SetPoint("BOTTOMLEFT", row.icon, "BOTTOMRIGHT", 8, 2)
-	row:SetScript("OnEnter", function(self) if not self.chosen then self.ground:SetColorTexture(1, 1, 1, HOVER) end end)
+	row:SetScript("OnEnter", function(self)
+		if self.chosen then return end
+		-- (the game look: the game's own hover picture)
+		if GameLook() then Skin.HoverTint(self.ground) else self.ground:SetColorTexture(1, 1, 1, HOVER) end
+	end)
 	row:SetScript("OnLeave", function(self) if not self.chosen then self.ground:SetColorTexture(0, 0, 0, 0) end end)
 	row:SetScript("OnClick", function(self, button) ChooseRecipe(self.recipe, button) end)
 	-- (what it makes, else the recipe itself: the game's own tooltip, as on the wall of icons)
@@ -231,7 +245,13 @@ end
 
 local function FillRow(row, recipe, chosen, rank)
 	row.recipe, row.chosen = recipe, chosen
-	if chosen then row.ground:SetColorTexture(GOLD[1], GOLD[2], GOLD[3], CHOSEN) else row.ground:SetColorTexture(0, 0, 0, 0) end
+	if chosen and GameLook() then
+		Skin.ChosenTint(row.ground)
+	elseif chosen then
+		row.ground:SetColorTexture(GOLD[1], GOLD[2], GOLD[3], CHOSEN)
+	else
+		row.ground:SetColorTexture(0, 0, 0, 0)
+	end
 	local can = recipe.learned and ns.CanMake(recipe) or 0
 	row.icon:Set(recipe.icon, Quality(recipe.item))
 	row.icon.texture:SetDesaturated(can == 0)
@@ -327,10 +347,15 @@ local function DrawList(recipe)
 			local frame
 			frame, headers = Pooled(ui.headerPool, headers, NewHeader)
 			place(frame, height)
-			frame.text:SetText(U.Upper(entry.header))
+			-- (the game look: its headers written as they are, a plus or a minus for the folded one)
+			frame.text:SetText(frame.game and entry.header or U.Upper(entry.header))
 			frame.fold, frame.closed = entry.fold, entry.closed
 			frame.chevron:SetShown(entry.fold or false)
-			Skin.SetGlyph(frame.chevron, entry.closed and "chevron" or "down")
+			if frame.game and Skin.GameAtlas(frame.chevron, entry.closed and "common-button-list-plus" or "common-button-list-minus") then
+				frame.chevron:SetVertexColor(1, 1, 1)
+			else
+				Skin.SetGlyph(frame.chevron, entry.closed and "chevron" or "down")
+			end
 			frame.text:SetPoint("LEFT", entry.fold and 16 or 4, -1)
 		elseif entry.cells then
 			local frame
@@ -800,7 +825,13 @@ local function DrawSuggestions(recipe)
 			local cost = found.cost < math.huge and U.Coins(found.cost)
 			local state = found.can > 0 and L.PROGRESS_CAN:format(found.can) or L.PROGRESS_SHORT
 			card.note:SetText(cost and state .. "  ·  " .. cost or state)
-			card.ground:SetColorTexture(GOLD[1], GOLD[2], GOLD[3], found.recipe.id == (recipe and recipe.id) and CHOSEN or 0.03)
+			local isShown = found.recipe.id == (recipe and recipe.id)
+			-- (the game look: the one shown on the game's chosen picture)
+			if isShown and GameLook() then
+				Skin.ChosenTint(card.ground)
+			else
+				card.ground:SetColorTexture(GOLD[1], GOLD[2], GOLD[3], isShown and CHOSEN or 0.03)
+			end
 		end
 	end
 end
@@ -839,7 +870,9 @@ local function DrawHero(recipe, rank)
 	if recipe.item and not quality then U.LoadItem(recipe.item) end
 	ui.plate:Set(recipe.icon, quality)
 	ui.plate.texture:SetDesaturated(not recipe.learned)
-	ui.kicker:SetText(U.Upper(recipe.learned and recipe.category or L.NOTE_TO_LEARN))
+	-- (the game look: its small gold titles, written as they are)
+	local kicker = recipe.learned and recipe.category or L.NOTE_TO_LEARN
+	ui.kicker:SetText(GameLook() and kicker or U.Upper(kicker))
 	ui.title:SetText(recipe.name)
 	if quality then ui.title:SetTextColor(U.QualityColor(quality)) else ui.title:SetTextColor(Skin.COLORS.gold[1], Skin.COLORS.gold[2], Skin.COLORS.gold[3]) end
 	DrawChips(recipe, color)
@@ -1030,6 +1063,11 @@ local function BuildList()
 	local thumb = slider:CreateTexture(nil, "ARTWORK")
 	thumb:SetSize(8, 14)
 	thumb:SetColorTexture(GOLD[1], GOLD[2], GOLD[3], 0.9)
+	-- (the game look: the game's own slider, its bar and its knob, as in its settings)
+	if GameLook() then
+		Skin.GameAtlas(track, "_Minimal_SliderBar_Middle", true)
+		Skin.GameAtlas(thumb, "Minimal_SliderBar_Button", true)
+	end
 	slider:SetThumbTexture(thumb)
 	slider:SetScript("OnValueChanged", function(_, value, byUser)
 		if not byUser then return end
@@ -1073,7 +1111,19 @@ local function BuildHero(stage)
 	local ground = hero:CreateTexture(nil, "BACKGROUND")
 	ground:SetAllPoints()
 	ground:SetColorTexture(1, 1, 1, 0.03)
-	Skin.Edges(hero, GOLD[1], GOLD[2], GOLD[3], 0.14)
+	local edges = Skin.Edges(hero, GOLD[1], GOLD[2], GOLD[3], 0.14)
+	-- (the game look: the game's sunken area under it, InsetFrameTemplate, in place of Wanderer's ground and edge;
+	-- held on the stage just under the piece, so it never covers what the piece shows)
+	if GameLook() and Skin.Game("InsetFrameTemplate") then
+		local ok, inset = pcall(CreateFrame, "Frame", nil, stage, "InsetFrameTemplate")
+		if ok and type(inset) == "table" then
+			inset:SetAllPoints(hero)
+			inset:SetFrameLevel(stage:GetFrameLevel() + 1)
+			hero:SetFrameLevel(stage:GetFrameLevel() + 3)
+			ground:SetColorTexture(1, 1, 1, 0)
+			edges.Color(1, 1, 1, 0)
+		end
+	end
 	-- (the profession's emblem, large and faint, behind the piece)
 	ui.art = hero:CreateTexture(nil, "BORDER")
 	ui.art:SetPoint("TOPRIGHT", -4, -4)
@@ -1098,7 +1148,7 @@ local function BuildHero(stage)
 	end)
 	ui.plate = plate
 	local right = ui.stageWidth - 16 - PLATE - 14 - 128
-	ui.kicker = Skin.Text(hero, "GameTooltipTextSmall", "kicker")
+	ui.kicker = Skin.Text(hero, GameLook() and "GameFontNormalSmall" or "GameTooltipTextSmall", "kicker")
 	ui.kicker:SetPoint("TOPLEFT", plate, "TOPRIGHT", 14, 4)
 	ui.kicker:SetWidth(right)
 	ui.kicker:SetJustifyH("LEFT")
