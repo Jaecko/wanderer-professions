@@ -53,6 +53,7 @@ local CONFIDENCE = { read = { "CHIP_READ", "CHIP_READ_DESC", "green" }, data = {
 local window, ui
 local current -- the skill line shown
 local picked = {} -- skill line -> the recipe chosen
+local picker -- (the enchant's item picker, made on first use further down)
 local query, onlyCan, asGrid = "", false, false
 local amount = 1
 local offset = 0
@@ -970,6 +971,8 @@ function ns.Draw()
 	end
 	local read = profession and ns.Recipes(current) ~= nil
 	local recipe = read and Selected() or nil
+	-- (the enchant's item picker chose for one recipe: another one selected, it closes)
+	if picker and picker:IsShown() and not (recipe and recipe.id == picker.recipe) then picker:Hide() end
 	for _, part in ipairs(ui.listParts) do part:SetShown(read and true or false) end
 	DrawList(recipe)
 	-- Nothing to show yet: said once, with the way out.
@@ -1237,7 +1240,6 @@ end
 -- first on a line of its own (gold-framed), then what your bags hold. A click chooses, its tooltip on hover; a click
 -- elsewhere, Escape or the cross close it.
 local PICK_SIZE, PICK_GAP, PICK_COLUMNS = 36, 4, 8
-local picker
 local function PickerSquare(index)
 	local square = picker.squares[index]
 	if square then return square end
