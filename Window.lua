@@ -361,8 +361,8 @@ local function DrawList(recipe)
 			frame.text:SetText(frame.game and entry.header or U.Upper(entry.header))
 			frame.fold, frame.closed = entry.fold, entry.closed
 			frame.chevron:SetShown(entry.fold or false)
-			if frame.game and Skin.GameAtlas(frame.chevron, entry.closed and "common-button-list-plus" or "common-button-list-minus") then
-				frame.chevron:SetVertexColor(1, 1, 1)
+			if frame.game and Skin.FoldSign and Skin.FoldSign(frame.chevron, entry.closed) then
+				-- (the game's own plus and minus)
 			else
 				Skin.SetGlyph(frame.chevron, entry.closed and "chevron" or "down")
 			end
