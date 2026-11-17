@@ -176,6 +176,8 @@ local LOCALES = {
 		ENCHANT_TARGET_DESC = "A click lists the items in your bags and those you wear that can take this enchant.",
 		ENCHANT_TARGET_NONE = "Nothing in your bags or on you can take this enchant.",
 		ENCHANT_TARGET_FIRST = "Choose the item to enchant first.",
+		ENCHANT_WORN = "On you",
+		ENCHANT_BAGS = "In your bags",
 	},
 }
 ns.LOCALES = LOCALES

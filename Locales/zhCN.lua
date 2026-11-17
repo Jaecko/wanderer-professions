@@ -172,4 +172,6 @@ ns.LOCALES.zhCN = {
 	ENCHANT_TARGET_DESC = "点击列出背包中和身上可以接受此附魔的物品。",
 	ENCHANT_TARGET_NONE = "背包中和身上没有可以接受此附魔的物品。",
 	ENCHANT_TARGET_FIRST = "请先选择要附魔的物品。",
+	ENCHANT_WORN = "身上",
+	ENCHANT_BAGS = "背包中",
 }

@@ -172,4 +172,6 @@ ns.LOCALES.ptBR = {
 	ENCHANT_TARGET_DESC = "Um clique lista os itens das suas bolsas e os que você veste que podem receber este encantamento.",
 	ENCHANT_TARGET_NONE = "Nada nas suas bolsas nem em você pode receber este encantamento.",
 	ENCHANT_TARGET_FIRST = "Escolha primeiro o item a encantar.",
+	ENCHANT_WORN = "Equipados",
+	ENCHANT_BAGS = "Nas suas bolsas",
 }

@@ -172,4 +172,6 @@ ns.LOCALES.itIT = {
 	ENCHANT_TARGET_DESC = "Un clic elenca gli oggetti nelle tue borse e quelli che indossi che possono ricevere questo incantamento.",
 	ENCHANT_TARGET_NONE = "Niente nelle tue borse o addosso può ricevere questo incantamento.",
 	ENCHANT_TARGET_FIRST = "Scegli prima l'oggetto da incantare.",
+	ENCHANT_WORN = "Indossati",
+	ENCHANT_BAGS = "Nelle tue borse",
 }

@@ -1234,6 +1234,105 @@ local function BuildHero(stage)
 	end
 end
 
+-- The items an enchant may go on, as in the bags: their squares in a frame beside the item's slot, what you wear
+-- first on a line of its own (gold-framed), then what your bags hold. A click chooses, its tooltip on hover; a click
+-- elsewhere, Escape or the cross close it.
+local PICK_SIZE, PICK_GAP, PICK_COLUMNS = 36, 4, 8
+local picker
+local function PickerSquare(index)
+	local square = picker.squares[index]
+	if square then return square end
+	square = CreateFrame("Button", nil, picker)
+	square:SetSize(PICK_SIZE, PICK_SIZE)
+	square.icon = Skin.Icon(square, PICK_SIZE)
+	square.icon:SetPoint("CENTER")
+	square.glow = square:CreateTexture(nil, "OVERLAY")
+	square.glow:SetPoint("TOPLEFT", -2, 2)
+	square.glow:SetPoint("BOTTOMRIGHT", 2, -2)
+	square.glow:SetColorTexture(1, 0.82, 0, 0.35)
+	square.glow:SetBlendMode("ADD")
+	square.glow:Hide()
+	local light = square:CreateTexture(nil, "HIGHLIGHT")
+	light:SetAllPoints()
+	light:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
+	light:SetBlendMode("ADD")
+	square:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		if GameTooltip.SetItemByGUID then GameTooltip:SetItemByGUID(self.guid) end
+		GameTooltip:Show()
+	end)
+	square:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	square:SetScript("OnClick", function(self)
+		Skin.Play("click")
+		targets[picker.recipe] = self.guid
+		picker:Hide()
+		ns.Draw()
+	end)
+	picker.squares[index] = square
+	return square
+end
+
+local function OpenPicker(owner, recipe, list)
+	if not picker then
+		picker = Skin.CreateWindow("WandererProfessionsTargets", "DIALOG")
+		Skin.Closable(picker, "WandererProfessionsTargets")
+		if Skin.PadWindow then Skin.PadWindow(picker) end
+		picker.squares = {}
+		local margin = Skin.Margin() + 4
+		picker.margin = margin
+		picker.title = Skin.Text(picker, "GameFontNormal", "gold")
+		picker.title:SetPoint("TOPLEFT", picker, "TOPLEFT", margin, -margin)
+		picker.title:SetText(L.ENCHANT_TARGET_PICK)
+		picker.worn = Skin.Caps(picker, L.ENCHANT_WORN, "label")
+		picker.bags = Skin.Caps(picker, L.ENCHANT_BAGS, "label")
+		Skin.CloseButton(picker, function() picker:Hide() end)
+	end
+	picker.owner, picker.recipe = owner, recipe.id
+	-- (what you wear first: the item an enchant is most often for)
+	local worn, carried = {}, {}
+	for _, guid in ipairs(list) do
+		local location, _, icon, quality = ns.TargetInfo(guid)
+		if location then
+			local entry = { guid = guid, icon = icon, quality = quality }
+			local equipped = location.IsEquipmentSlot and U.Safe(location.IsEquipmentSlot, location)
+			if equipped then worn[#worn + 1] = entry else carried[#carried + 1] = entry end
+		end
+	end
+	local margin = picker.margin
+	local columns = math.max(1, math.min(PICK_COLUMNS, math.max(#worn, #carried)))
+	local width = columns * PICK_SIZE + (columns - 1) * PICK_GAP
+	local y = margin + 22
+	local used = 0
+	local function Section(caption, found)
+		caption:SetShown(found[1] ~= nil)
+		if not found[1] then return end
+		caption:ClearAllPoints()
+		caption:SetPoint("TOPLEFT", picker, "TOPLEFT", margin, -y)
+		y = y + 16
+		for index, entry in ipairs(found) do
+			used = used + 1
+			local square = PickerSquare(used)
+			local column, row = (index - 1) % columns, math.floor((index - 1) / columns)
+			square:ClearAllPoints()
+			square:SetPoint("TOPLEFT", picker, "TOPLEFT", margin + column * (PICK_SIZE + PICK_GAP), -(y + row * (PICK_SIZE + PICK_GAP)))
+			square.guid = entry.guid
+			square.icon:Set(entry.icon, entry.quality)
+			-- (worn: a gold frame and a light, picked out at a glance)
+			square.glow:SetShown(caption == picker.worn)
+			if caption == picker.worn then square.icon.edges.Color(1, 0.82, 0, 1) end
+			square:Show()
+		end
+		y = y + math.ceil(#found / columns) * (PICK_SIZE + PICK_GAP) + 6
+	end
+	Section(picker.worn, worn)
+	Section(picker.bags, carried)
+	for index = used + 1, #picker.squares do picker.squares[index]:Hide() end
+	picker:SetSize(math.max(width, (U.Measure(picker.title, "GetStringWidth", 160)) + 30) + margin * 2, y + margin - 6)
+	picker:ClearAllPoints()
+	picker:SetPoint("BOTTOMLEFT", owner, "TOPLEFT", 0, 8)
+	picker:Show()
+end
+
 local function BuildActions(stage)
 	local y = -HERO_HEIGHT - 26 - (MAX_CARDS / 2) * CARD_HEIGHT - 2
 	ui.minus = Skin.GlyphButton(stage, "minus", 14, L.LESS, function() SetAmount(amount - 1) end)
@@ -1312,19 +1411,7 @@ local function BuildActions(stage)
 		Skin.Play("click")
 		local list = ns.EnchantTargets(recipe)
 		if not list[1] then return W.Print(L.ENCHANT_TARGET_NONE) end
-		U.Menu(self, function(_, root)
-			for _, guid in ipairs(list) do
-				local location, name, icon, quality = ns.TargetInfo(guid)
-				if location then
-					local r, g, b = U.QualityColor(quality or 1)
-					local words = (icon and ("|T" .. icon .. ":16:16:0:0|t ") or "") .. U.Colorize(name, r, g, b)
-					root:CreateButton(words, function()
-						targets[recipe.id] = guid
-						ns.Draw()
-					end)
-				end
-			end
-		end)
+		OpenPicker(self, recipe, list)
 	end)
 	ui.target:Hide()
 	ui.addQueue = Skin.SmallButton(stage, L.ADD_QUEUE, function()

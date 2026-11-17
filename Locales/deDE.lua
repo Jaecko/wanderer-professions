@@ -172,4 +172,6 @@ ns.LOCALES.deDE = {
 	ENCHANT_TARGET_DESC = "Ein Klick zeigt die Gegenstände in deinen Taschen und die, die du trägst, die diese Verzauberung aufnehmen können.",
 	ENCHANT_TARGET_NONE = "Nichts in deinen Taschen oder an dir kann diese Verzauberung aufnehmen.",
 	ENCHANT_TARGET_FIRST = "Wähle zuerst den zu verzaubernden Gegenstand.",
+	ENCHANT_WORN = "An dir",
+	ENCHANT_BAGS = "In deinen Taschen",
 }

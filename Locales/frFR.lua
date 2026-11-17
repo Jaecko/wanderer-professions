@@ -172,4 +172,6 @@ ns.LOCALES.frFR = {
 	ENCHANT_TARGET_DESC = "Un clic liste les objets de vos sacs et ceux que vous portez qui peuvent recevoir cet enchantement.",
 	ENCHANT_TARGET_NONE = "Rien dans vos sacs ni sur vous ne peut recevoir cet enchantement.",
 	ENCHANT_TARGET_FIRST = "Choisissez d'abord l'objet à enchanter.",
+	ENCHANT_WORN = "Sur vous",
+	ENCHANT_BAGS = "Dans vos sacs",
 }

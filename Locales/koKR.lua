@@ -172,4 +172,6 @@ ns.LOCALES.koKR = {
 	ENCHANT_TARGET_DESC = "클릭하면 가방과 착용 중인 아이템 중 이 마법부여를 받을 수 있는 것을 보여줍니다.",
 	ENCHANT_TARGET_NONE = "가방이나 착용 중인 아이템 중 이 마법부여를 받을 수 있는 것이 없습니다.",
 	ENCHANT_TARGET_FIRST = "먼저 마법부여할 아이템을 선택하세요.",
+	ENCHANT_WORN = "착용 중",
+	ENCHANT_BAGS = "가방 안",
 }
