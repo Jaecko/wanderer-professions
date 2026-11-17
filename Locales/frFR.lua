@@ -167,4 +167,9 @@ ns.LOCALES.frFR = {
 	PROFESSION_BOOK = "Livre des métiers",
 	PROFESSION_BOOK_DESC = "Le livre des métiers du jeu : Découverte d'herbes, Découverte de gisements, désapprendre un métier.",
 	AMOUNT_CAPPED = "%d au plus à la fois (de quoi en faire %d).",
+	ENCHANT_TARGET = "Objet à enchanter",
+	ENCHANT_TARGET_PICK = "Choisir l'objet à enchanter",
+	ENCHANT_TARGET_DESC = "Un clic liste les objets de vos sacs et ceux que vous portez qui peuvent recevoir cet enchantement.",
+	ENCHANT_TARGET_NONE = "Rien dans vos sacs ni sur vous ne peut recevoir cet enchantement.",
+	ENCHANT_TARGET_FIRST = "Choisissez d'abord l'objet à enchanter.",
 }

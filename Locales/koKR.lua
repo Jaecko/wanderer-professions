@@ -167,4 +167,9 @@ ns.LOCALES.koKR = {
 	PROFESSION_BOOK = "전문 기술 책",
 	PROFESSION_BOOK_DESC = "게임의 전문 기술 책: 약초 찾기, 광물 찾기, 전문 기술 잊기.",
 	AMOUNT_CAPPED = "한 번에 최대 %d개 (%d개 만들 수 있음).",
+	ENCHANT_TARGET = "마법부여할 아이템",
+	ENCHANT_TARGET_PICK = "마법부여할 아이템 선택",
+	ENCHANT_TARGET_DESC = "클릭하면 가방과 착용 중인 아이템 중 이 마법부여를 받을 수 있는 것을 보여줍니다.",
+	ENCHANT_TARGET_NONE = "가방이나 착용 중인 아이템 중 이 마법부여를 받을 수 있는 것이 없습니다.",
+	ENCHANT_TARGET_FIRST = "먼저 마법부여할 아이템을 선택하세요.",
 }

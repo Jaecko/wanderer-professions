@@ -167,4 +167,9 @@ ns.LOCALES.itIT = {
 	PROFESSION_BOOK = "Libro delle professioni",
 	PROFESSION_BOOK_DESC = "Il libro delle professioni del gioco: Ricerca erbe, Ricerca minerali, disimparare una professione.",
 	AMOUNT_CAPPED = "Al massimo %d alla volta (ce n'è per %d).",
+	ENCHANT_TARGET = "Oggetto da incantare",
+	ENCHANT_TARGET_PICK = "Scegli l'oggetto da incantare",
+	ENCHANT_TARGET_DESC = "Un clic elenca gli oggetti nelle tue borse e quelli che indossi che possono ricevere questo incantamento.",
+	ENCHANT_TARGET_NONE = "Niente nelle tue borse o addosso può ricevere questo incantamento.",
+	ENCHANT_TARGET_FIRST = "Scegli prima l'oggetto da incantare.",
 }

@@ -167,4 +167,9 @@ ns.LOCALES.ptBR = {
 	PROFESSION_BOOK = "Livro de profissões",
 	PROFESSION_BOOK_DESC = "O livro de profissões do jogo: Encontrar Ervas, Encontrar Minérios, desaprender uma profissão.",
 	AMOUNT_CAPPED = "No máximo %d de uma vez (dá para %d).",
+	ENCHANT_TARGET = "Item a encantar",
+	ENCHANT_TARGET_PICK = "Escolher o item a encantar",
+	ENCHANT_TARGET_DESC = "Um clique lista os itens das suas bolsas e os que você veste que podem receber este encantamento.",
+	ENCHANT_TARGET_NONE = "Nada nas suas bolsas nem em você pode receber este encantamento.",
+	ENCHANT_TARGET_FIRST = "Escolha primeiro o item a encantar.",
 }

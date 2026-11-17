@@ -167,4 +167,9 @@ ns.LOCALES.deDE = {
 	PROFESSION_BOOK = "Berufebuch",
 	PROFESSION_BOOK_DESC = "Das Berufebuch des Spiels: Kräutersuche, Mineraliensuche, einen Beruf verlernen.",
 	AMOUNT_CAPPED = "Höchstens %d auf einmal (genug für %d).",
+	ENCHANT_TARGET = "Zu verzaubernder Gegenstand",
+	ENCHANT_TARGET_PICK = "Gegenstand zum Verzaubern wählen",
+	ENCHANT_TARGET_DESC = "Ein Klick zeigt die Gegenstände in deinen Taschen und die, die du trägst, die diese Verzauberung aufnehmen können.",
+	ENCHANT_TARGET_NONE = "Nichts in deinen Taschen oder an dir kann diese Verzauberung aufnehmen.",
+	ENCHANT_TARGET_FIRST = "Wähle zuerst den zu verzaubernden Gegenstand.",
 }

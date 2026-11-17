@@ -167,4 +167,9 @@ ns.LOCALES.zhCN = {
 	PROFESSION_BOOK = "专业技能书",
 	PROFESSION_BOOK_DESC = "游戏的专业技能书：寻找草药、寻找矿物、遗忘专业。",
 	AMOUNT_CAPPED = "一次最多%d个（材料够做%d个）。",
+	ENCHANT_TARGET = "要附魔的物品",
+	ENCHANT_TARGET_PICK = "选择要附魔的物品",
+	ENCHANT_TARGET_DESC = "点击列出背包中和身上可以接受此附魔的物品。",
+	ENCHANT_TARGET_NONE = "背包中和身上没有可以接受此附魔的物品。",
+	ENCHANT_TARGET_FIRST = "请先选择要附魔的物品。",
 }

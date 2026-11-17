@@ -171,6 +171,11 @@ local LOCALES = {
 		PROFESSION_BOOK = "Profession book",
 		PROFESSION_BOOK_DESC = "The game's book of your professions: Find Herbs, Find Minerals, unlearn a profession.",
 		AMOUNT_CAPPED = "At most %d at once (enough for %d).",
+		ENCHANT_TARGET = "Item to enchant",
+		ENCHANT_TARGET_PICK = "Choose the item to enchant",
+		ENCHANT_TARGET_DESC = "A click lists the items in your bags and those you wear that can take this enchant.",
+		ENCHANT_TARGET_NONE = "Nothing in your bags or on you can take this enchant.",
+		ENCHANT_TARGET_FIRST = "Choose the item to enchant first.",
 	},
 }
 ns.LOCALES = LOCALES

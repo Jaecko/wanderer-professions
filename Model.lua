@@ -521,13 +521,63 @@ end
 
 -- Doing it -----------------------------------------------------------------------------------------------------
 
--- Only from a click. Gives false and the reason when it cannot start.
-function ns.Craft(recipe, count)
+-- An enchant: laid on an item you choose (the game asks which, then lays it). By the game's own word when it gives
+-- one (kept), else by what it makes (nothing: an enchant).
+local enchants = {}
+function ns.IsEnchant(recipe)
+	if not recipe then return false end
+	if enchants[recipe.id] ~= nil then return enchants[recipe.id] end
+	local ui = C_TradeSkillUI
+	local schematic = ui and ui.GetRecipeSchematic and Safe(ui.GetRecipeSchematic, recipe.id, false)
+	local kind = type(schematic) == "table" and Clean(schematic.recipeType) or nil
+	local types = Enum and Enum.TradeskillRecipeType
+	if kind ~= nil and types and types.Enchant ~= nil then
+		enchants[recipe.id] = kind == types.Enchant
+		return enchants[recipe.id]
+	end
+	return not recipe.item
+end
+
+-- The items an enchant may be laid on, from your bags and what you wear: their GUIDs, as the game gives them.
+function ns.EnchantTargets(recipe)
+	local ui = C_TradeSkillUI
+	if not (recipe and ui and ui.GetEnchantItems) then return {} end
+	local list = Safe(ui.GetEnchantItems, recipe.id, {})
+	local out = {}
+	for _, guid in ipairs(type(list) == "table" and list or EMPTY) do
+		guid = Clean(guid)
+		if type(guid) == "string" then out[#out + 1] = guid end
+	end
+	return out
+end
+
+-- An item by its GUID: its place (nil when it is gone), its name, icon and quality.
+function ns.TargetInfo(guid)
+	if type(guid) ~= "string" then return nil end
+	local location = C_Item and C_Item.GetItemLocation and Safe(C_Item.GetItemLocation, guid)
+	if not (location and (not location.IsValid or Safe(location.IsValid, location))) then return nil end
+	local item = Item and Item.CreateFromItemGUID and Safe(Item.CreateFromItemGUID, Item, guid)
+	if not item then return nil end
+	return location, Clean(Safe(item.GetItemName, item)) or "?", Clean(Safe(item.GetItemIcon, item)), Clean(Safe(item.GetItemQuality, item))
+end
+
+-- Only from a click. Gives false and the reason when it cannot start. target: for an enchant, the GUID of the item
+-- chosen to receive it.
+function ns.Craft(recipe, count, target)
 	local ui = C_TradeSkillUI
 	if not (ui and ui.CraftRecipe) then return false, L.CRAFT_NO_API end
 	if InCombatLockdown() then return false, L.IN_FIGHT end
 	if recipe.line ~= live then return false, L.OPEN_FIRST end
-	local ok, result = pcall(ui.CraftRecipe, recipe.id, count)
+	local ok, result
+	if ns.IsEnchant(recipe) and ui.CraftEnchant then
+		-- (the game lays an enchant only on an item named: one at a time)
+		local location = ns.TargetInfo(target)
+		if not location then return false, L.ENCHANT_TARGET_FIRST end
+		count = 1
+		ok, result = pcall(ui.CraftEnchant, recipe.id, 1, {}, location, false)
+	else
+		ok, result = pcall(ui.CraftRecipe, recipe.id, count)
+	end
 	DB().lastCraft = { id = recipe.id, count = count, ok = ok, result = tostring(result), time = time() }
 	if not ok then return false, L.CRAFT_REFUSED end
 	run = { id = recipe.id, name = recipe.name, icon = recipe.icon, total = count, done = 0, last = GetTime() }

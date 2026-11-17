@@ -115,6 +115,9 @@ local function RecipeLink(recipe)
 end
 
 -- The chosen recipe (first time here: what helps now, or the first one you know).
+-- The item chosen to receive each enchant (its GUID), by recipe, for this session.
+local targets = {}
+
 local function Selected()
 	local recipe = picked[current] and ns.FindRecipe(current, picked[current])
 	if recipe then return recipe end
@@ -791,6 +794,12 @@ local function DrawActions(recipe, can)
 	for _, widget in ipairs({ ui.minus, ui.amount, ui.plus, ui.maximum, ui.addQueue, ui.create }) do widget:SetShown(isKnown) end
 	ui.actionNote:SetShown(not recipe.learned)
 	ui.create.why = nil
+	-- (an enchant, its profession open: the item to receive it in place of the amount and the queue)
+	local enchant = isKnown and isLive and ns.IsEnchant(recipe)
+	ui.target:SetShown(enchant and true or false)
+	if enchant then
+		for _, widget in ipairs({ ui.minus, ui.amount, ui.plus, ui.maximum, ui.addQueue }) do widget:Hide() end
+	end
 	if run then return end
 	if not isKnown then
 		ui.actionNote:SetText(L.NOTE_NOT_YET)
@@ -809,8 +818,19 @@ local function DrawActions(recipe, can)
 		ui.create:SetLabel(count > 1 and L.CREATE_MANY:format(count) or L.CREATE)
 		-- (a tool or a place missing: the game would refuse, so the button says why instead)
 		local unmet = ns.Unmet(recipe)
-		ui.create:SetEnabled(can > 0 and not ns.CooldownLeft(recipe) and not unmet)
-		ui.create.why = unmet and L.CHIP_NEEDS_SPEC:format(unmet) or nil
+		-- (an enchant: the item it goes on chosen first, still there)
+		local missing = false
+		if enchant then
+			local guid = targets[recipe.id]
+			local location, name, icon, quality = ns.TargetInfo(guid)
+			if not location then targets[recipe.id] = nil end
+			ui.target.icon:Set(location and icon or "Interface\\PaperDoll\\UI-Backpack-EmptySlot", location and quality or nil)
+			ui.target.name:SetText(location and name or L.ENCHANT_TARGET_PICK)
+			if location then ui.target.name:SetTextColor(U.QualityColor(quality or 1)) else ui.target.name:SetTextColor(Skin.RGB("gold")) end
+			missing = not location
+		end
+		ui.create:SetEnabled(can > 0 and not ns.CooldownLeft(recipe) and not unmet and not missing)
+		ui.create.why = (unmet and L.CHIP_NEEDS_SPEC:format(unmet)) or (missing and L.ENCHANT_TARGET_FIRST) or nil
 	else
 		ui.create:SetLabel(L.OPEN_PROFESSION)
 		ui.create:SetEnabled(true)
@@ -1001,7 +1021,7 @@ local function Start(recipe, count)
 		PickProfession(recipe.line)
 		return
 	end
-	local ok, why = ns.Craft(recipe, count)
+	local ok, why = ns.Craft(recipe, count, targets[recipe.id])
 	if not ok then W.Print(why) end
 end
 
@@ -1250,6 +1270,63 @@ local function BuildActions(stage)
 		self:SetText(text)
 		if self.Fit then self:Fit() end
 	end
+	-- An enchant's item: its square and name, a click lists the items it may be laid on (bags and what you wear).
+	ui.target = CreateFrame("Button", nil, stage)
+	ui.target:SetHeight(30)
+	ui.target:SetPoint("TOPLEFT", stage, "TOPLEFT", 0, y + 4)
+	ui.target:SetPoint("RIGHT", ui.create, "LEFT", -16, 0)
+	ui.target.hover = ui.target:CreateTexture(nil, "BACKGROUND")
+	ui.target.hover:SetAllPoints()
+	Skin.HoverTint(ui.target.hover)
+	ui.target.hover:Hide()
+	ui.target.icon = Skin.Icon(ui.target, 26)
+	ui.target.icon:SetPoint("LEFT", ui.target, "LEFT", 2, 0)
+	ui.target.label = Skin.Text(ui.target, "GameTooltipTextSmall", "muted")
+	ui.target.label:SetPoint("TOPLEFT", ui.target.icon, "TOPRIGHT", 8, 0)
+	ui.target.label:SetText(L.ENCHANT_TARGET)
+	ui.target.name = Skin.Text(ui.target, "GameTooltipText", "text")
+	ui.target.name:SetPoint("BOTTOMLEFT", ui.target.icon, "BOTTOMRIGHT", 8, 0)
+	ui.target.name:SetPoint("RIGHT", ui.target, "RIGHT", -4, 0)
+	ui.target.name:SetJustifyH("LEFT")
+	if ui.target.name.SetWordWrap then ui.target.name:SetWordWrap(false) end
+	ui.target:SetScript("OnEnter", function(self)
+		self.hover:Show()
+		local recipe = Selected()
+		local guid = recipe and targets[recipe.id]
+		GameTooltip:SetOwner(self, "ANCHOR_TOP")
+		if guid and ns.TargetInfo(guid) and GameTooltip.SetItemByGUID then
+			GameTooltip:SetItemByGUID(guid)
+		else
+			GameTooltip:AddLine(L.ENCHANT_TARGET, 1, 0.82, 0)
+			GameTooltip:AddLine(L.ENCHANT_TARGET_DESC, 1, 1, 1, true)
+		end
+		GameTooltip:Show()
+	end)
+	ui.target:SetScript("OnLeave", function(self)
+		self.hover:Hide()
+		GameTooltip:Hide()
+	end)
+	ui.target:SetScript("OnClick", function(self)
+		local recipe = Selected()
+		if not recipe then return end
+		Skin.Play("click")
+		local list = ns.EnchantTargets(recipe)
+		if not list[1] then return W.Print(L.ENCHANT_TARGET_NONE) end
+		U.Menu(self, function(_, root)
+			for _, guid in ipairs(list) do
+				local location, name, icon, quality = ns.TargetInfo(guid)
+				if location then
+					local r, g, b = U.QualityColor(quality or 1)
+					local words = (icon and ("|T" .. icon .. ":16:16:0:0|t ") or "") .. U.Colorize(name, r, g, b)
+					root:CreateButton(words, function()
+						targets[recipe.id] = guid
+						ns.Draw()
+					end)
+				end
+			end
+		end)
+	end)
+	ui.target:Hide()
 	ui.addQueue = Skin.SmallButton(stage, L.ADD_QUEUE, function()
 		local recipe = Selected()
 		if recipe then ns.Enqueue(recipe, amount) end

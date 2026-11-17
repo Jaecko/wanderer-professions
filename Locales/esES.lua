@@ -167,4 +167,9 @@ ns.LOCALES.esES = {
 	PROFESSION_BOOK = "Libro de profesiones",
 	PROFESSION_BOOK_DESC = "El libro de profesiones del juego: Buscar hierbas, Buscar minerales, olvidar una profesión.",
 	AMOUNT_CAPPED = "Como mucho %d a la vez (hay para %d).",
+	ENCHANT_TARGET = "Objeto que encantar",
+	ENCHANT_TARGET_PICK = "Elegir el objeto que encantar",
+	ENCHANT_TARGET_DESC = "Un clic muestra los objetos de tus bolsas y los que llevas puestos que pueden recibir este encantamiento.",
+	ENCHANT_TARGET_NONE = "Nada en tus bolsas ni en ti puede recibir este encantamiento.",
+	ENCHANT_TARGET_FIRST = "Elige primero el objeto que encantar.",
 }
