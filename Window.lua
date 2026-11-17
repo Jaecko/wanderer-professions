@@ -361,9 +361,8 @@ local function DrawList(recipe)
 			frame.text:SetText(frame.game and entry.header or U.Upper(entry.header))
 			frame.fold, frame.closed = entry.fold, entry.closed
 			frame.chevron:SetShown(entry.fold or false)
-			if frame.game and Skin.FoldSign and Skin.FoldSign(frame.chevron, entry.closed) then
-				-- (the game's own plus and minus)
-			else
+			-- (the game look: the game's own plus and minus; else Wanderer's chevron)
+			if not (frame.game and Skin.FoldSign and Skin.FoldSign(frame.chevron, entry.closed)) then
 				Skin.SetGlyph(frame.chevron, entry.closed and "chevron" or "down")
 			end
 			frame.text:SetPoint("LEFT", entry.fold and 16 or 4, -1)
