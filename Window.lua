@@ -13,6 +13,8 @@ local Skin = W and W.Skin
 
 local WIDTH, HEIGHT = 920, 600
 local TOP = 66 -- (under the heading)
+local GAME_TOP = 50 -- (the game look: the heading on the line of the cog, its bar and next rank under it)
+local GAME_HEADING = 6 -- (the game look: the heading's top, in the invisible title's place)
 local RAIL, RAIL_ROW = 48, 62
 local LIST_WIDTH = 270
 local LIST_TOP = 80 -- (the search, the two switches, the skill to look at)
@@ -38,6 +40,11 @@ local GOLD = Skin and Skin.COLORS.gold
 local HOVER, CHOSEN = Skin and rawget(Skin, "HOVER") or 0.05, Skin and rawget(Skin, "CHOSEN") or 0.1
 -- (the game look drawn: the game's own rows, headers and pictures; an older Wanderer has no such look)
 local function GameLook() return Skin ~= nil and rawget(Skin, "GameWindows") ~= nil and Skin.GameWindows() end
+-- (the game look: the name in the game's bar, everything as much higher, the window as much less tall)
+local function Top() return GameLook() and GAME_TOP or TOP end
+local function Height() return HEIGHT - (TOP - Top()) end
+-- (the heading's buttons: level with the cog in the game look)
+local function ButtonTop() return GameLook() and -3 or -8 end
 local SKILL_WORDS = { red = "COLOR_RED", orange = "COLOR_ORANGE", yellow = "COLOR_YELLOW", green = "COLOR_GREEN", grey = "COLOR_GREY" }
 local SKILL_TONES = { red = "red", orange = "gold", yellow = "gold", green = "green", grey = "grey" }
 local CONFIDENCE = { read = { "CHIP_READ", "CHIP_READ_DESC", "green" }, data = { "CHIP_DATA", "CHIP_DATA_DESC", "blue" },
@@ -398,7 +405,7 @@ local function RailButton(index)
 	if button then return button end
 	button = CreateFrame("Button", nil, window)
 	button:SetSize(RAIL, RAIL_ROW - 4)
-	button:SetPoint("TOPLEFT", window, "TOPLEFT", ui.margin, -TOP - (index - 1) * RAIL_ROW)
+	button:SetPoint("TOPLEFT", window, "TOPLEFT", ui.margin, -Top() - (index - 1) * RAIL_ROW)
 	button.icon = Skin.RoundPortrait(button, 40)
 	button.icon:SetPoint("TOP", 0, -2)
 	button.rank = Skin.Text(button, "GameTooltipTextSmall", "soft")
@@ -460,8 +467,8 @@ local function DrawRail(list)
 	DrawPageButtons()
 	-- (as many professions as fit above the pages: the rows closer, the icons smaller, when there are many)
 	local pages = #ns.PagesFor(current)
-	local height = U.Clean(U.Safe(window.GetHeight, window)) or HEIGHT
-	local room = height - TOP - ui.margin - pages * PAGE_BUTTON - 8
+	local height = U.Clean(U.Safe(window.GetHeight, window)) or Height()
+	local room = height - Top() - ui.margin - pages * PAGE_BUTTON - 8
 	local row = math.max(36, math.min(RAIL_ROW, math.floor(room / math.max(1, math.min(#list, MAX_PROFESSIONS)))))
 	local icon = math.max(22, math.min(40, row - 22))
 	for index = 1, MAX_PROFESSIONS do
@@ -471,7 +478,7 @@ local function DrawRail(list)
 			button:SetShown(known ~= nil)
 			button:SetSize(RAIL, row - 4)
 			button:ClearAllPoints()
-			button:SetPoint("TOPLEFT", window, "TOPLEFT", ui.margin, -TOP - (index - 1) * row)
+			button:SetPoint("TOPLEFT", window, "TOPLEFT", ui.margin, -Top() - (index - 1) * row)
 			button.icon:SetSize(icon, icon)
 			button.icon.ring:SetSize(icon + 3, icon + 3)
 			if known then
@@ -914,7 +921,7 @@ local function DrawHeading(profession)
 	if atBench then
 		ui.bookButton:SetPoint("RIGHT", ui.gameButton, "LEFT", -6, 0)
 	else
-		ui.bookButton:SetPoint("TOPRIGHT", window, "TOPRIGHT", -62, -8)
+		ui.bookButton:SetPoint("TOPRIGHT", window, "TOPRIGHT", -62, ButtonTop())
 	end
 	ui.bookButton:SetShown(_G.ToggleProfessionsBook ~= nil or (_G.ToggleSpellBook ~= nil and _G.BOOKTYPE_PROFESSION ~= nil))
 end
@@ -935,7 +942,7 @@ function ns.Draw()
 	ui.whatIfReset:SetShown(seen ~= nil and not ns.CurrentPage())
 	if profession then ui.slider:SetValue(seen or profession.rank) end
 	DrawHeading(profession)
-	ns.DrawPage(window, ui.margin + RAIL + 10, TOP, ui.margin, ui.margin)
+	ns.DrawPage(window, ui.margin + RAIL + 10, Top(), ui.margin, ui.margin)
 	if ns.CurrentPage() then
 		for _, part in ipairs(ui.listParts) do part:Hide() end
 		ui.stage:Hide()
@@ -1025,7 +1032,7 @@ local function BuildList()
 		query, offset = ui.search:GetText() or "", 0
 		ns.Draw()
 	end })
-	search:SetPoint("TOPLEFT", window, "TOPLEFT", left, -TOP)
+	search:SetPoint("TOPLEFT", window, "TOPLEFT", left, -Top())
 	search:SetWidth(LIST_WIDTH)
 	ui.search = search
 	local can = Skin.SmallButton(window, L.ONLY_CAN, function(self)
@@ -1083,7 +1090,7 @@ local function BuildList()
 	reset:SetPoint("LEFT", slider, "RIGHT", 2, 0)
 	ui.whatIfReset = reset
 	local rows = CreateFrame("Frame", nil, window)
-	rows:SetPoint("TOPLEFT", window, "TOPLEFT", left, -TOP - LIST_TOP)
+	rows:SetPoint("TOPLEFT", window, "TOPLEFT", left, -Top() - LIST_TOP)
 	rows:SetSize(LIST_WIDTH - Skin.SCROLL_WIDTH, HEIGHT - TOP - LIST_TOP - ui.margin)
 	rows:EnableMouseWheel(true)
 	rows:SetScript("OnMouseWheel", function(_, delta)
@@ -1349,7 +1356,7 @@ end
 
 local function BuildPrompt(stage)
 	local prompt = CreateFrame("Frame", nil, window)
-	prompt:SetPoint("TOPLEFT", window, "TOPLEFT", ui.margin + RAIL + 10, -TOP)
+	prompt:SetPoint("TOPLEFT", window, "TOPLEFT", ui.margin + RAIL + 10, -Top())
 	prompt:SetPoint("BOTTOMRIGHT", stage, "BOTTOMRIGHT", 0, 0)
 	ui.promptTitle = Skin.Text(prompt, "GameTooltipHeaderText", "gold")
 	ui.promptTitle:SetPoint("CENTER", 0, 40)
@@ -1364,7 +1371,9 @@ end
 local function BuildHeading()
 	local left = ui.margin + RAIL + 10 + LIST_WIDTH + STAGE_GAP
 	local heading = CreateFrame("Frame", nil, window)
-	heading:SetPoint("TOPLEFT", window, "TOPLEFT", left, -ui.margin - 2)
+	-- (the game look: in the invisible title's place, the name on the line of the cog)
+	if GameLook() then heading:SetPoint("TOPLEFT", window, "TOPLEFT", ui.margin, -GAME_HEADING)
+	else heading:SetPoint("TOPLEFT", window, "TOPLEFT", left, -ui.margin - 2) end
 	heading:SetSize(300, 36)
 	ui.headName = Skin.Text(heading, "GameTooltipText", "gold")
 	ui.headName:SetPoint("TOPLEFT")
@@ -1379,15 +1388,15 @@ local function BuildHeading()
 	ui.headNext:SetPoint("TOPLEFT", ui.headBar, "BOTTOMLEFT", 0, -3)
 	ui.heading = heading
 	ui.gameButton = Skin.SmallButton(window, L.GAME_WINDOW, function() ns.UseGameWindow() end, L.GAME_WINDOW_DESC)
-	ui.gameButton:SetPoint("TOPRIGHT", window, "TOPRIGHT", -62, -8)
+	ui.gameButton:SetPoint("TOPRIGHT", window, "TOPRIGHT", -62, ButtonTop())
 	-- The game's profession book (Find Herbs, Find Minerals, unlearn): the professions key opens the workbench now.
 	ui.bookButton = Skin.SmallButton(window, L.PROFESSION_BOOK, OpenBook, L.PROFESSION_BOOK_DESC)
-	ui.bookButton:SetPoint("TOPRIGHT", window, "TOPRIGHT", -62, -8)
+	ui.bookButton:SetPoint("TOPRIGHT", window, "TOPRIGHT", -62, ButtonTop())
 end
 
 local function Create()
 	window = Skin.CreateWindow("WandererProfessionsWindow", "MEDIUM")
-	window:SetSize(WIDTH, HEIGHT)
+	window:SetSize(WIDTH, Height())
 	window:Hide()
 	Skin.Sounds(window, Skin.SOUNDS.open, Skin.SOUNDS.close)
 	Skin.Dress(window, { "CENTER", UIParent, "CENTER", 0, 30 }, "professionsPos")
@@ -1398,7 +1407,7 @@ local function Create()
 	ui.stageWidth = WIDTH - margin * 2 - RAIL - 10 - LIST_WIDTH - STAGE_GAP
 	BuildList()
 	local stage = CreateFrame("Frame", nil, window)
-	stage:SetPoint("TOPLEFT", window, "TOPLEFT", margin + RAIL + 10 + LIST_WIDTH + STAGE_GAP, -TOP)
+	stage:SetPoint("TOPLEFT", window, "TOPLEFT", margin + RAIL + 10 + LIST_WIDTH + STAGE_GAP, -Top())
 	stage:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", -margin, margin)
 	ui.stage = stage
 	BuildHero(stage)
