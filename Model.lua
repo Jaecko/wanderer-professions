@@ -161,11 +161,29 @@ function ns.ReadLive()
 	return line
 end
 
+local function Reagents(flat)
+	local list = {}
+	for index = 1, #(flat or EMPTY), 2 do list[#list + 1] = { id = flat[index], need = flat[index + 1] } end
+	return list
+end
+
+local schematicRead = {} -- (the recipes whose reagents the game was asked this session)
+
 -- Asked when a recipe is chosen: where the game says it comes from.
 function ns.ReadSource(recipe)
 	local ui = C_TradeSkillUI
 	local book = DB().seen[recipe.line]
 	local row = book and book.recipes[recipe.id]
+	-- (the reagents as the game asks them, once a session: the database may name an item this world does not
+	-- have, its card then left without a name)
+	if row and ui and live == recipe.line and not schematicRead[recipe.id] then
+		schematicRead[recipe.id] = true
+		local was = row.r
+		row.r = nil
+		ReadSchematic(ui, recipe.id, row)
+		row.r = row.r or was
+		if row.r then recipe.reagents = Reagents(row.r) end
+	end
 	if not (row and ui and ui.GetRecipeSourceText) or recipe.sourceText then return end
 	local text = Clean(Safe(ui.GetRecipeSourceText, recipe.id))
 	if type(text) == "string" and text ~= "" then
@@ -182,12 +200,6 @@ local function SpellName(id)
 end
 local function SpellIcon(id)
 	if C_Spell and C_Spell.GetSpellTexture then return Clean(Safe(C_Spell.GetSpellTexture, id)) end
-end
-
-local function Reagents(flat)
-	local list = {}
-	for index = 1, #(flat or EMPTY), 2 do list[#list + 1] = { id = flat[index], need = flat[index + 1] } end
-	return list
 end
 
 local function Category(book, id)
