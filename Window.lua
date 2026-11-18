@@ -1287,8 +1287,34 @@ local function OpenPicker(owner, recipe, list)
 		picker.worn = Skin.Caps(picker, L.ENCHANT_WORN, "label")
 		picker.bags = Skin.Caps(picker, L.ENCHANT_BAGS, "label")
 		Skin.CloseButton(picker, function() picker:Hide() end)
+		-- (the bags or what you wear changed while it is open: drawn again a moment later, closed when nothing can
+		-- take the enchant any more; heard only while it is open. A chosen item gone is let go at the next draw.)
+		local heard = CreateFrame("Frame")
+		local soon = 0
+		heard:SetScript("OnEvent", function()
+			soon = soon + 1
+			local mine = soon
+			C_Timer.After(0.2, function()
+				if mine ~= soon or not picker:IsShown() then return end
+				local chosen = picker.chosenFor
+				local found = {}
+				for _, guid in ipairs(chosen and ns.EnchantTargets(chosen) or {}) do
+					if ns.TargetInfo(guid) then found[#found + 1] = guid end
+				end
+				if not found[1] then return picker:Hide() end
+				OpenPicker(picker.owner, chosen, found)
+			end)
+		end)
+		picker:HookScript("OnShow", function()
+			pcall(heard.RegisterEvent, heard, "BAG_UPDATE_DELAYED")
+			pcall(heard.RegisterEvent, heard, "PLAYER_EQUIPMENT_CHANGED")
+		end)
+		picker:HookScript("OnHide", function()
+			heard:UnregisterAllEvents()
+			soon = soon + 1
+		end)
 	end
-	picker.owner, picker.recipe = owner, recipe.id
+	picker.owner, picker.recipe, picker.chosenFor = owner, recipe.id, recipe
 	-- (what you wear first: the item an enchant is most often for)
 	local worn, carried = {}, {}
 	for _, guid in ipairs(list) do
@@ -1333,6 +1359,7 @@ local function OpenPicker(owner, recipe, list)
 	picker:SetPoint("BOTTOMLEFT", owner, "TOPLEFT", 0, 8)
 	picker:Show()
 end
+ns.OpenPickerForTests = OpenPicker -- (tests)
 
 local function BuildActions(stage)
 	local y = -HERO_HEIGHT - 26 - (MAX_CARDS / 2) * CARD_HEIGHT - 2
